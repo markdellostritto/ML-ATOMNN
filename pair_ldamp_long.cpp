@@ -306,8 +306,7 @@ void PairLDampLong::init_style(){
 	*/
 	
 	//neighbor->add_request(this);
-	neighbor->add_request(this, NeighConst::REQ_FULL);
-	
+	neighbor->add_request(this, NeighConst::REQ_DEFAULT);
 }
 
 /* ----------------------------------------------------------------------
@@ -319,9 +318,9 @@ double PairLDampLong::init_one(int i, int j){
 	if (setflag[i][j]==0) {
 		c6_[i][j]=sqrt(c6_[i][i]*c6_[j][j]);
 		rvdw_[i][j]=0.5*(rvdw_[i][i]+rvdw_[j][j]);
-		rvdw3_[i][j]=rvdw_[i][j]*rvdw_[i][j]*rvdw_[i][j];
-		rvdw6_[i][j]=rvdw3_[i][j]*rvdw3_[i][j];
 	}
+	rvdw3_[i][j]=rvdw_[i][j]*rvdw_[i][j]*rvdw_[i][j];
+	rvdw6_[i][j]=rvdw3_[i][j]*rvdw3_[i][j];
 	cutsq[i][j] = rc_*rc_;
 	
 	c6_[j][i]=c6_[i][j];
