@@ -69,7 +69,8 @@ void PairCGemmLong::compute(int eflag, int vflag)
 {
   double r2inv, r6inv, forcelj;
   
-  const double pe=1.0/(2.0*0.05*0.05);
+  const double rRep=0.05;
+  const double cRep=1.0/(2.0*rRep*rRep);
 
   double evdwl = 0.0;
   double ecoul = 0.0;
@@ -129,7 +130,7 @@ void PairCGemmLong::compute(int eflag, int vflag)
           fCoul=prefactor/dr2*(
             (ferfg-ferfp)
             +2.0/MY_PIS*dr*(
-              -rgammaC[itype][jtype]*std::exp(-gammaC[itype][jtype]*dr2)
+              -rgammaC[itype][jtype]*std::exp(-0.5*gammaC[itype][jtype]*dr2)
               +g_ewald*std::exp(-g_ewald*g_ewald*dr2)
             )
           );
@@ -137,12 +138,12 @@ void PairCGemmLong::compute(int eflag, int vflag)
         } 
         
         //overlap
-        const double eOver=aOver[itype][jtype]*Zi*Zj*std::exp(-gammaS[itype][jtype]*dr2)*factor_lj;
-        double fOver=2.0*gammaS[itype][jtype]*eOver;
+        const double eOver=aOver[itype][jtype]*Zi*Zj*std::exp(-0.5*gammaS[itype][jtype]*dr2)*factor_lj;
+        double fOver=gammaS[itype][jtype]*eOver;
         
         //repulsion
-        const double eRep=aRep[itype][jtype]*std::exp(-pe*dr)*factor_lj;
-        const double fRep=pe*eRep;
+        const double eRep=aRep[itype][jtype]*std::exp(-cRep*dr)*factor_lj;
+        const double fRep=cRep*eRep;
 
         const double fpair = fCoul+fOver+fRep;
         f[i][0] += delx * fpair;

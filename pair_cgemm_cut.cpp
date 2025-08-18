@@ -194,7 +194,7 @@ void PairCGemmCut::allocate()
   memory->create(aRep, n, n, "pair:aRep");
   memory->create(gammaS, n, n, "pair:gammaS");
   memory->create(gammaC, n, n, "pair:gammaC");
-  memory->create(rgammaC, n, n, "pair:gammaC");
+  memory->create(rgammaC, n, n, "pair:rgammaC");
 }
 
 /* ----------------------------------------------------------------------
