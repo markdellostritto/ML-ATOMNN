@@ -203,7 +203,7 @@ void PairCGemmCut::allocate()
 
 void PairCGemmCut::settings(int narg, char **arg)
 {
-  if (narg != 3) error->all(FLERR, "Illegal pair_style command");
+  if (narg != 1) error->all(FLERR, "Illegal pair_style command");
   cut_global = utils::numeric(FLERR, arg[0], false, lmp);
   // reset cutoffs that have been explicitly set
   if (allocated) {
@@ -221,7 +221,7 @@ void PairCGemmCut::settings(int narg, char **arg)
 
 void PairCGemmCut::coeff(int narg, char **arg)
 {
-  if (narg < 5 || narg > 6) error->all(FLERR, "Incorrect args for pair coefficients");
+  if (narg < 6 || narg > 7) error->all(FLERR, "Incorrect args for pair coefficients");
   if (!allocated) allocate();
 
   int ilo, ihi, jlo, jhi;
@@ -270,9 +270,17 @@ void PairCGemmCut::init_style()
 double PairCGemmCut::init_one(int i, int j)
 {
   if (setflag[i][j] == 0) {
-    //harmonic average
+    //gamma - harmonic average
     gammaC[i][j] = 2.0*gammaC[i][i]*gammaC[j][j]/(gammaC[i][i]+gammaC[j][j]);
     gammaS[i][j] = 2.0*gammaS[i][i]*gammaS[j][j]/(gammaS[i][i]+gammaS[j][j]);  
+    //aOver - harmonic average
+    if(aOver[i][i] > 1.0e-8 && aOver[j][j] > 1.0e-8){
+      aOver[i][j] = 2.0*aOver[i][i]*aOver[j][j]/(aOver[i][i]+aOver[j][j]);
+    } else aOver[i][j] = 0.0;
+    //aRep - harmonic average
+    if(aRep[i][i] > 1.0e-8 && aRep[j][j] > 1.0e-8){
+      aRep[i][j] = 2.0*aRep[i][i]*aRep[j][j]/(aRep[i][i]+aRep[j][j]);
+    } else aRep[i][j] = 0.0;
     //arithmetic average
     cut[i][j] = 0.5*(cut[i][i]+cut[j][j]);
   }
@@ -282,7 +290,9 @@ double PairCGemmCut::init_one(int i, int j)
   gammaC[j][i]=gammaC[i][j];
   gammaS[j][i]=gammaS[i][j];
   rgammaC[j][i]=rgammaC[i][j];
-  cut[j][i] = cut[i][j];
+  aOver[j][i]=aOver[i][j];
+  aRep[j][i]=aRep[i][j];
+  cut[j][i]=cut[i][j];
 
   return cut[i][j];
 }

@@ -206,8 +206,9 @@ void PairCGemmLong::allocate()
 
 void PairCGemmLong::settings(int narg, char **arg)
 {
-  if (narg != 3) error->all(FLERR, "Illegal pair_style command");
+  if (narg != 1) error->all(FLERR, "Illegal pair_style command");
   cut_global = utils::numeric(FLERR, arg[0], false, lmp);
+  std::cout<<"cut_global = "<<cut_global<<"\n";
   // reset cutoffs that have been explicitly set
   if (allocated) {
     for (int i = 1; i <= atom->ntypes; i++){
@@ -238,6 +239,8 @@ void PairCGemmLong::coeff(int narg, char **arg)
 
   double cut_one = cut_global;
   if (narg == 7) cut_one = utils::numeric(FLERR, arg[6], false, lmp);
+  std::cout<<"narg = "<<narg<<"\n";
+  std::cout<<"cut_one = "<<cut_one<<"\n";
 
   int count = 0;
   for (int i = ilo; i <= ihi; i++) {
@@ -261,11 +264,16 @@ void PairCGemmLong::coeff(int narg, char **arg)
 
 void PairCGemmLong::init_style()
 {
-  // request regular or rRESPA neighbor list
+  //check for charge
+  if (!atom->q_flag) error->all(FLERR, "Pair style lj/cut/coul/long requires atom attribute q");
+  //set neighborlist style
   int list_style = NeighConst::REQ_DEFAULT;
   neighbor->add_request(this, list_style);
+  // ensure use of KSpace long-range solver, set g_ewald
   if (force->kspace == nullptr) error->all(FLERR, "Pair style requires a KSpace style");
   g_ewald = force->kspace->g_ewald;
+  // setup force tables
+  if (ncoultablebits) init_tables(cut_global, nullptr);
 }
 
 /* ----------------------------------------------------------------------
@@ -275,10 +283,18 @@ void PairCGemmLong::init_style()
 double PairCGemmLong::init_one(int i, int j)
 {
   if (setflag[i][j] == 0) {
-    //harmonic average
+    //gamma - harmonic average
     gammaC[i][j] = 2.0*gammaC[i][i]*gammaC[j][j]/(gammaC[i][i]+gammaC[j][j]);
     gammaS[i][j] = 2.0*gammaS[i][i]*gammaS[j][j]/(gammaS[i][i]+gammaS[j][j]);
-    //arithmetic average
+    //aOver - harmonic average
+    if(aOver[i][i] > 1.0e-8 && aOver[j][j] > 1.0e-8){
+      aOver[i][j] = 2.0*aOver[i][i]*aOver[j][j]/(aOver[i][i]+aOver[j][j]);
+    } else aOver[i][j] = 0.0;
+    //aRep - harmonic average
+    if(aRep[i][i] > 1.0e-8 && aRep[j][j] > 1.0e-8){
+      aRep[i][j] = 2.0*aRep[i][i]*aRep[j][j]/(aRep[i][i]+aRep[j][j]);
+    } else aRep[i][j] = 0.0;
+    //cutoff - arithmetic average
     cut[i][j] = 0.5*(cut[i][i]+cut[j][j]);
   }
   rgammaC[i][j] = std::sqrt(0.5*gammaC[i][j]);
@@ -287,7 +303,9 @@ double PairCGemmLong::init_one(int i, int j)
   gammaC[j][i]=gammaC[i][j];
   gammaS[j][i]=gammaS[i][j];
   rgammaC[j][i]=rgammaC[i][j];
-  cut[j][i] = cut[i][j];
+  aOver[j][i]=aOver[i][j];
+  aRep[j][i]=aRep[i][j];
+  cut[j][i]=cut[i][j];
 
   return cut[i][j];
 }
