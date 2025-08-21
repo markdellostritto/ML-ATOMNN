@@ -244,6 +244,7 @@ void PairCGemmCut::coeff(int narg, char **arg)
       rgammaC[i][j] = std::sqrt(0.5*gammaC_one);
       aOver[i][j] = aOver_one;
       aRep[i][j] = aRep_one;
+      cut[i][j] = cut_one;
       setflag[i][j] = 1;
       count++;
     }
@@ -269,6 +270,7 @@ void PairCGemmCut::init_style()
 
 double PairCGemmCut::init_one(int i, int j)
 {
+  //set parameters (i,j)
   if (setflag[i][j] == 0) {
     //gamma - harmonic average
     gammaC[i][j] = 2.0*gammaC[i][i]*gammaC[j][j]/(gammaC[i][i]+gammaC[j][j]);
@@ -285,6 +287,7 @@ double PairCGemmCut::init_one(int i, int j)
     cut[i][j] = 0.5*(cut[i][i]+cut[j][j]);
   }
   rgammaC[i][j] = std::sqrt(0.5*gammaC[i][j]);
+  cutsq[i][j]=cut[i][j]*cut[i][j];
 
   //reflection
   gammaC[j][i]=gammaC[i][j];
@@ -293,6 +296,7 @@ double PairCGemmCut::init_one(int i, int j)
   aOver[j][i]=aOver[i][j];
   aRep[j][i]=aRep[i][j];
   cut[j][i]=cut[i][j];
+  cutsq[j][i]=cutsq[i][j];
 
   return cut[i][j];
 }

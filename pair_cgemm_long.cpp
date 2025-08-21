@@ -208,7 +208,6 @@ void PairCGemmLong::settings(int narg, char **arg)
 {
   if (narg != 1) error->all(FLERR, "Illegal pair_style command");
   cut_global = utils::numeric(FLERR, arg[0], false, lmp);
-  std::cout<<"cut_global = "<<cut_global<<"\n";
   // reset cutoffs that have been explicitly set
   if (allocated) {
     for (int i = 1; i <= atom->ntypes; i++){
@@ -225,7 +224,7 @@ void PairCGemmLong::settings(int narg, char **arg)
 
 void PairCGemmLong::coeff(int narg, char **arg)
 {
-  if (narg < 5 || narg > 6) error->all(FLERR, "Incorrect args for pair coefficients");
+  if (narg < 6 || narg > 7) error->all(FLERR, "Incorrect args for pair coefficients");
   if (!allocated) allocate();
 
   int ilo, ihi, jlo, jhi;
@@ -239,9 +238,7 @@ void PairCGemmLong::coeff(int narg, char **arg)
 
   double cut_one = cut_global;
   if (narg == 7) cut_one = utils::numeric(FLERR, arg[6], false, lmp);
-  std::cout<<"narg = "<<narg<<"\n";
-  std::cout<<"cut_one = "<<cut_one<<"\n";
-
+  
   int count = 0;
   for (int i = ilo; i <= ihi; i++) {
     for (int j = MAX(jlo, i); j <= jhi; j++) {
@@ -250,6 +247,7 @@ void PairCGemmLong::coeff(int narg, char **arg)
       rgammaC[i][j] = std::sqrt(0.5*gammaC_one);
       aOver[i][j] = aOver_one;
       aRep[i][j] = aRep_one;
+      cut[i][j] = cut_one;
       setflag[i][j] = 1;
       count++;
     }
@@ -272,8 +270,6 @@ void PairCGemmLong::init_style()
   // ensure use of KSpace long-range solver, set g_ewald
   if (force->kspace == nullptr) error->all(FLERR, "Pair style requires a KSpace style");
   g_ewald = force->kspace->g_ewald;
-  // setup force tables
-  if (ncoultablebits) init_tables(cut_global, nullptr);
 }
 
 /* ----------------------------------------------------------------------
@@ -282,6 +278,7 @@ void PairCGemmLong::init_style()
 
 double PairCGemmLong::init_one(int i, int j)
 {
+  //set parameters (i,j)
   if (setflag[i][j] == 0) {
     //gamma - harmonic average
     gammaC[i][j] = 2.0*gammaC[i][i]*gammaC[j][j]/(gammaC[i][i]+gammaC[j][j]);
@@ -298,14 +295,16 @@ double PairCGemmLong::init_one(int i, int j)
     cut[i][j] = 0.5*(cut[i][i]+cut[j][j]);
   }
   rgammaC[i][j] = std::sqrt(0.5*gammaC[i][j]);
+  cutsq[i][j]=cut[i][j]*cut[i][j];
 
-  //reflection
+  //reflection (j,i)
   gammaC[j][i]=gammaC[i][j];
   gammaS[j][i]=gammaS[i][j];
   rgammaC[j][i]=rgammaC[i][j];
   aOver[j][i]=aOver[i][j];
   aRep[j][i]=aRep[i][j];
   cut[j][i]=cut[i][j];
+  cutsq[j][i]=cutsq[i][j];
 
   return cut[i][j];
 }
