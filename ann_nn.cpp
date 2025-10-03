@@ -371,12 +371,13 @@ void Neuron::tf_atish(double c, const VecXd& z, VecXd& a, VecXd& d){
 void Neuron::tf_test(double c, const VecXd& z, VecXd& a, VecXd& d){
 	const int size=z.size();
 	for(int i=0; i<size; ++i){
-		const double zz=c*z[i];
-		const double z2=zz*zz;
-		const double z4=z2*z2;
-		const double den=1.0/sqrt(sqrt(z4+1.0));
-		a[i]=0.5*z[i]*(1.0+zz*den);
-		d[i]=0.5*(zz*den*(1.0+1.0/(z4+1.0))+1.0);
+		const double fexp=std::exp(-z[i]*z[i]);
+		//const double ferf=std::erf(z[i]);
+		const double zs=math::special::sgn(z[i]);
+		const double t=1.0/(1.0+0.3275911*z[i]*zs);
+		const double ferf=zs*(1.0-t*(0.254829592+t*(-0.284496736+t*(1.421413741+t*(-1.453152027+t*1.061405429))))*fexp);
+		a[i]=0.5*(z[i]*ferf+(fexp+z[i]*RadPI-1.0)/RadPI);
+		d[i]=0.5*(ferf+1.0);
 	}
 }
 
