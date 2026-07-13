@@ -52,14 +52,14 @@ class Init{
 public:
 	//enum
 	enum Type{
-		UNKNOWN=0,
+		NONE=0,
 		RAND=1,
 		LECUN=2,
 		HE=3,
 		XAVIER=4
 	};
 	//constructor
-	Init():t_(Type::UNKNOWN){}
+	Init():t_(Type::NONE){}
 	Init(Type t):t_(t){}
 	//operators
 	operator Type()const{return t_;}
@@ -81,7 +81,7 @@ class Neuron{
 public:
 	//type
 	enum Type{
-		UNKNOWN,
+		NONE,
 		//linear
 		LINEAR,
 		//sigmoidal
@@ -98,16 +98,17 @@ public:
 		GELU,
 		MISH,
 		PFLU,
+		P4LU,
 		LOGISH,
 		//switch
 		SOFTPLUS,
 		SQPLUS,
 		ATISH,
-		//test
-		TEST
+		IERF,
+		TILU
 	};
 	//constructor
-	Neuron():t_(Type::UNKNOWN){}
+	Neuron():t_(Type::NONE){}
 	Neuron(Type t):t_(t){}
 	//operators
 	operator Type()const{return t_;}
@@ -131,13 +132,14 @@ public:
 	static void tf_gelu(double c, const VecXd& z, VecXd& a, VecXd& d);
 	static void tf_mish(double c, const VecXd& z, VecXd& a, VecXd& d);
 	static void tf_pflu(double c, const VecXd& z, VecXd& a, VecXd& d);
+	static void tf_p4lu(double c, const VecXd& z, VecXd& a, VecXd& d);
 	static void tf_logish(double c, const VecXd& z, VecXd& a, VecXd& d);
 	//switch
 	static void tf_softplus(double c, const VecXd& z, VecXd& a, VecXd& d);
 	static void tf_sqplus(double c, const VecXd& z, VecXd& a, VecXd& d);
 	static void tf_atish(double c, const VecXd& z, VecXd& a, VecXd& d);
-	//test
-	static void tf_test(double c, const VecXd& z, VecXd& a, VecXd& d);
+	static void tf_ierf(double c, const VecXd& z, VecXd& a, VecXd& d);
+	static void tf_tilu(double c, const VecXd& z, VecXd& a, VecXd& d);
 private:
 	Type t_;
 	//prevent automatic conversion for other built-in types

@@ -37,7 +37,7 @@ std::ostream& operator<<(std::ostream& out, const Init& init){
 		case Init::LECUN: out<<"LECUN"; break;
 		case Init::HE: out<<"HE"; break;
 		case Init::XAVIER: out<<"XAVIER"; break;
-		default: out<<"UNKNOWN"; break;
+		default: out<<"NONE"; break;
 	}
 	return out;
 }
@@ -48,7 +48,7 @@ const char* Init::name(const Init& init){
 		case Init::LECUN: return "LECUN";
 		case Init::HE: return "HE";
 		case Init::XAVIER: return "XAVIER";
-		default: return "UNKNOWN";
+		default: return "NONE";
 	}
 }
 
@@ -57,7 +57,7 @@ Init Init::read(const char* str){
 	else if(std::strcmp(str,"LECUN")==0) return Init::LECUN;
 	else if(std::strcmp(str,"HE")==0) return Init::HE;
 	else if(std::strcmp(str,"XAVIER")==0) return Init::XAVIER;
-	else return Init::UNKNOWN;
+	else return Init::NONE;
 }
 
 //***********************************************************************
@@ -88,9 +88,9 @@ std::ostream& operator<<(std::ostream& out, const Neuron& neuron){
 		case Neuron::SOFTPLUS: out<<"SOFTPLUS"; break;
 		case Neuron::SQPLUS: out<<"SQPLUS"; break;
 		case Neuron::ATISH: out<<"ATISH"; break;
-		//test
-		case Neuron::TEST: out<<"TEST"; break;
-		default: out<<"UNKNOWN"; break;
+		case Neuron::IERF: out<<"IERF"; break;
+		case Neuron::TILU: out<<"TILU"; break;
+		default: out<<"NONE"; break;
 	}
 	return out;
 }
@@ -117,9 +117,9 @@ const char* Neuron::name(const Neuron& neuron){
 		case Neuron::SOFTPLUS: return "SOFTPLUS";
 		case Neuron::SQPLUS: return "SQPLUS";
 		case Neuron::ATISH: return "ATISH";
-		//test
-		case Neuron::TEST: return "TEST";
-		default: return "UNKNOWN";
+		case Neuron::IERF: return "IERF";
+		case Neuron::TILU: return "TILU";
+		default: return "NONE";
 	}
 }
 
@@ -139,14 +139,15 @@ Neuron Neuron::read(const char* str){
 	else if(std::strcmp(str,"GELU")==0) return Neuron::GELU;
 	else if(std::strcmp(str,"MISH")==0) return Neuron::MISH;
 	else if(std::strcmp(str,"PFLU")==0) return Neuron::PFLU;
+	else if(std::strcmp(str,"P4LU")==0) return Neuron::PFLU;
 	else if(std::strcmp(str,"LOGISH")==0) return Neuron::LOGISH;
 	//switch
 	else if(std::strcmp(str,"SOFTPLUS")==0) return Neuron::SOFTPLUS;
 	else if(std::strcmp(str,"SQPLUS")==0) return Neuron::SQPLUS;
 	else if(std::strcmp(str,"ATISH")==0) return Neuron::ATISH;
-	//test
-	else if(std::strcmp(str,"TEST")==0) return Neuron::TEST;
-	else return Neuron::UNKNOWN;
+	else if(std::strcmp(str,"IERF")==0) return Neuron::IERF;
+	else if(std::strcmp(str,"TILU")==0) return Neuron::TILU;
+	else return Neuron::NONE;
 }
 
 //==== functions ====
@@ -316,6 +317,18 @@ void Neuron::tf_pflu(double c, const VecXd& z, VecXd& a, VecXd& d){
 	}
 }
 
+void Neuron::tf_p4lu(double c, const VecXd& z, VecXd& a, VecXd& d){
+	const int size=z.size();
+	for(int i=0; i<size; ++i){
+		const double zz=c*z[i];
+		const double z2=zz*zz;
+		const double z4=z2*z2;
+		const double den=1.0/sqrt(sqrt(z4+1.0));
+		a[i]=0.5*z[i]*(1.0+zz*den);
+		d[i]=0.5*(zz*den*(1.0+1.0/(z4+1.0))+1.0);
+	}
+}
+
 void Neuron::tf_logish(double c, const VecXd& z, VecXd& a, VecXd& d){
 	const int size=z.size();
 	const double log2i=1.0/LOG2;
@@ -366,9 +379,7 @@ void Neuron::tf_atish(double c, const VecXd& z, VecXd& a, VecXd& d){
 	}
 }
 
-//test
-
-void Neuron::tf_test(double c, const VecXd& z, VecXd& a, VecXd& d){
+void Neuron::tf_ierf(double c, const VecXd& z, VecXd& a, VecXd& d){
 	const int size=z.size();
 	for(int i=0; i<size; ++i){
 		const double fexp=std::exp(-z[i]*z[i]);
@@ -378,6 +389,24 @@ void Neuron::tf_test(double c, const VecXd& z, VecXd& a, VecXd& d){
 		const double ferf=zs*(1.0-t*(0.254829592+t*(-0.284496736+t*(1.421413741+t*(-1.453152027+t*1.061405429))))*fexp);
 		a[i]=0.5*(z[i]*ferf+(fexp+z[i]*RadPI-1.0)/RadPI);
 		d[i]=0.5*(ferf+1.0);
+	}
+}
+
+void Neuron::tf_tilu(double c, const VecXd& z, VecXd& a, VecXd& d){
+	const int size=z.size();
+	const double iPI=1.0/PI;
+	for(int i=0; i<size; ++i){
+		if(z[i]<-1.0){
+			a[i]=iPI-0.5;
+			d[i]=0.0;
+		} else if(z[i]>1.0) {
+			a[i]=z[i]+iPI-0.5;
+			d[i]=1.0;
+		} else {
+			const double arg=0.5*PI*z[i];
+			a[i]=0.5*z[i]+iPI*(1.0-cos(arg));
+			d[i]=0.5*(sin(arg)+1.0);
+		}
 	}
 }
 
@@ -474,7 +503,7 @@ void ANN::defaults(){
 	//gradients - nodes
 		dadz_.clear();
 	//transfer functions
-		neuron_=Neuron::UNKNOWN;
+		neuron_=Neuron::NONE;
 		neuronp_.clear();
 }
 
@@ -708,8 +737,8 @@ void ANN::resize(const ANNP& annp, int nInp, const std::vector<int>& nNodes){
 			case Neuron::SOFTPLUS: for(int i=0; i<nlayer_; ++i) neuronp_[i]=Neuron::tf_softplus; break;
 			case Neuron::SQPLUS:   for(int i=0; i<nlayer_; ++i) neuronp_[i]=Neuron::tf_sqplus; break;
 			case Neuron::ATISH:    for(int i=0; i<nlayer_; ++i) neuronp_[i]=Neuron::tf_atish; break;
-			//test
-			case Neuron::TEST:     for(int i=0; i<nlayer_; ++i) neuronp_[i]=Neuron::tf_test; break;
+			case Neuron::IERF:     for(int i=0; i<nlayer_; ++i) neuronp_[i]=Neuron::tf_ierf; break;
+			case Neuron::TILU:     for(int i=0; i<nlayer_; ++i) neuronp_[i]=Neuron::tf_tilu; break;
 			default: throw std::invalid_argument("ANN::resize(const ANNP&,const std::vector<int>&): Invalid transfer function."); break;
 		}
 	//set final layer to linear
@@ -858,7 +887,7 @@ void ANN::read(FILE* reader, ANN& nn){
 	token.read(fgets(input,MAX,reader),string::WS); token.next();
 	annp.neuron()=Neuron::read(token.next().c_str());
 	annp.c()=std::atof(token.next().c_str());
-	if(annp.neuron()==Neuron::UNKNOWN) throw std::invalid_argument("ANN::read(FILE*,ANN&): Invalid neuron.");
+	if(annp.neuron()==Neuron::NONE) throw std::invalid_argument("ANN::read(FILE*,ANN&): Invalid neuron.");
 	//==== resize the nueral newtork ====
 	if(NN_PRINT_STATUS>0) std::cout<<"resizing neural network\n";
 	nn.resize(annp,nodes);
@@ -1330,7 +1359,7 @@ namespace serialize{
 		int nlayer=0,nInp=0;
 		double c=0;
 		std::vector<int> nNodes;
-		NN::Neuron neuron=NN::Neuron::UNKNOWN;
+		NN::Neuron neuron=NN::Neuron::NONE;
 		//neuron type
 		std::memcpy(&neuron,arr+pos,sizeof(NN::Neuron)); pos+=sizeof(NN::Neuron);
 		std::memcpy(&c,arr+pos,sizeof(double)); pos+=sizeof(double);
