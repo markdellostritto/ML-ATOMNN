@@ -21,14 +21,14 @@ public:
 	class Name{
 	public:
 		enum Type{
-			UNKNOWN,
+			NONE,
 			STEP,
 			COS,
 			TANH,
 			POLY3
 		};
 		//constructor
-		Name():t_(Type::UNKNOWN){}
+		Name():t_(Type::NONE){}
 		Name(Type t):t_(t){}
 		//operators
 		operator Type()const{return t_;}
@@ -47,7 +47,7 @@ protected:
 	double pirci_;//PI*rci_
 public:
 	//==== constructors/destructors ====
-	Cutoff():name_(Name::UNKNOWN),rc_(0),rci_(0),pirci_(0){}
+	Cutoff():name_(Name::NONE),rc_(0),rci_(0),pirci_(0){}
 	Cutoff(Name name, double rc);
 	~Cutoff(){}
 	

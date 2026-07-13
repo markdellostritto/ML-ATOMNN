@@ -17,7 +17,7 @@ Cutoff::Name Cutoff::Name::read(const char* str){
 	else if(std::strcmp(str,"COS")==0) return Cutoff::Name::COS;
 	else if(std::strcmp(str,"TANH")==0) return Cutoff::Name::TANH;
 	else if(std::strcmp(str,"POLY3")==0) return Cutoff::Name::POLY3;
-	else return Cutoff::Name::UNKNOWN;
+	else return Cutoff::Name::NONE;
 }
 
 const char* Cutoff::Name::name(const Cutoff::Name& name){
@@ -26,7 +26,7 @@ const char* Cutoff::Name::name(const Cutoff::Name& name){
 		case Cutoff::Name::COS: return "COS";
 		case Cutoff::Name::TANH: return "TANH";
 		case Cutoff::Name::POLY3: return "POLY3";
-		default: return "UNKNOWN";
+		default: return "NONE";
 	}
 }
 
@@ -36,7 +36,7 @@ std::ostream& operator<<(std::ostream& out, const Cutoff::Name& name){
 		case Cutoff::Name::COS: out<<"COS"; break;
 		case Cutoff::Name::TANH: out<<"TANH"; break;
 		case Cutoff::Name::POLY3: out<<"POLY3"; break;
-		default: out<<"UNKNOWN"; break;
+		default: out<<"NONE"; break;
 	}
 	return out;
 }
@@ -48,7 +48,7 @@ std::ostream& operator<<(std::ostream& out, const Cutoff::Name& name){
 //==== constructors/destructors ====
 
 Cutoff::Cutoff(Cutoff::Name name, double rc){
-	if(name==Cutoff::Name::UNKNOWN) throw std::invalid_argument("Cutoff::Cutoff(Cutoff::Name&,double): Invalid Cutoff name.");
+	if(name==Cutoff::Name::NONE) throw std::invalid_argument("Cutoff::Cutoff(Cutoff::Name&,double): Invalid Cutoff name.");
 	if(rc<0) throw std::invalid_argument("Cutoff::Cutoff(Cutoff::Name&,double): Invalid Cutoff distance.");
 	name_=name;
 	rc_=rc;
@@ -187,7 +187,7 @@ namespace serialize{
 	
 	template <> int unpack(Cutoff& obj, const char* arr){
 		int pos=0;
-		Cutoff::Name name=Cutoff::Name::UNKNOWN;
+		Cutoff::Name name=Cutoff::Name::NONE;
 		double rc=0;
 		std::memcpy(&name,arr+pos,sizeof(name)); pos+=sizeof(name);
 		std::memcpy(&rc,arr+pos,sizeof(rc)); pos+=sizeof(rc);
