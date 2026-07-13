@@ -25,7 +25,7 @@ public:
 	class Name{
 	public:
 		enum Type{
-			UNKNOWN,
+			NONE,
 			GAUSSIAN,
 			SECH,
 			LOGISTIC,
@@ -34,7 +34,7 @@ public:
 			LOGCOSH2
 		};
 		//constructor
-		Name():t_(Type::UNKNOWN){}
+		Name():t_(Type::NONE){}
 		Name(Type t):t_(t){}
 		//operators
 		operator Type()const{return t_;}
@@ -54,7 +54,7 @@ private:
 	double dr_,cutf_,cutg_;
 public:
 	//==== constructors/destructors ====
-	BasisR():Basis(),name_(Name::UNKNOWN){}
+	BasisR():Basis(),name_(Name::NONE){}
 	BasisR(double rc, Cutoff::Name cutname, int nf, Name name);
 	~BasisR();
 	

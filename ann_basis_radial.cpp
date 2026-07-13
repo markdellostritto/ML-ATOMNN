@@ -32,7 +32,7 @@ BasisR::Name BasisR::Name::read(const char* str){
 	else if(std::strcmp(str,"TANH")==0) return BasisR::Name::TANH;
 	else if(std::strcmp(str,"LOGCOSH")==0) return BasisR::Name::LOGCOSH;
 	else if(std::strcmp(str,"LOGCOSH2")==0) return BasisR::Name::LOGCOSH2;
-	else return BasisR::Name::UNKNOWN;
+	else return BasisR::Name::NONE;
 }
 
 const char* BasisR::Name::name(const BasisR::Name& name){
@@ -43,7 +43,7 @@ const char* BasisR::Name::name(const BasisR::Name& name){
 		case BasisR::Name::TANH: return "TANH";
 		case BasisR::Name::LOGCOSH: return "LOGCOSH";
 		case BasisR::Name::LOGCOSH2: return "LOGCOSH2";
-		default: return "UNKNOWN";
+		default: return "NONE";
 	}
 }
 
@@ -55,7 +55,7 @@ std::ostream& operator<<(std::ostream& out, const BasisR::Name& name){
 		case BasisR::Name::TANH: out<<"TANH"; break;
 		case BasisR::Name::LOGCOSH: out<<"LOGCOSH"; break;
 		case BasisR::Name::LOGCOSH2: out<<"LOGCOSH2"; break;
-		default: out<<"UNKNOWN"; break;
+		default: out<<"NONE"; break;
 	}
 	return out;
 }
@@ -71,7 +71,7 @@ std::ostream& operator<<(std::ostream& out, const BasisR::Name& name){
 */
 BasisR::BasisR(double rc, Cutoff::Name cutname, int size, BasisR::Name name):Basis(rc,cutname,size){
 	if(BASIS_RADIAL_PRINT_FUNC>0) std::cout<<"BasisR(rc,Cutoff::Name,int,BasisR::Name):\n";
-	if(name==BasisR::Name::UNKNOWN) throw std::invalid_argument("BasisR(rc,Cutoff::Name,int,BasisR::Name): invalid radial function type");
+	if(name==BasisR::Name::NONE) throw std::invalid_argument("BasisR(rc,Cutoff::Name,int,BasisR::Name): invalid radial function type");
 	else name_=name;
 	resize(size);
 }
@@ -152,7 +152,7 @@ void BasisR::read(FILE* reader, BasisR& basis){
 void BasisR::clear(){
 	if(BASIS_RADIAL_PRINT_FUNC>0) std::cout<<"BasisR::clear():\n";
 	Basis::clear();
-	name_=BasisR::Name::UNKNOWN;
+	name_=BasisR::Name::NONE;
 	rs_.clear();
 	eta_.clear();
 }
@@ -337,7 +337,7 @@ namespace serialize{
 	template <> int unpack(BasisR& obj, const char* arr){
 		if(BASIS_RADIAL_PRINT_FUNC>0) std::cout<<"unpack(BasisR&,const char*):\n";
 		int pos=0; int size=0;
-		BasisR::Name name=BasisR::Name::UNKNOWN;
+		BasisR::Name name=BasisR::Name::NONE;
 		std::memcpy(&size,arr+pos,sizeof(size)); pos+=sizeof(size);
 		std::memcpy(&name,arr+pos,sizeof(BasisR::Name)); pos+=sizeof(BasisR::Name);
 		pos+=unpack(obj.cutoff(),arr+pos);

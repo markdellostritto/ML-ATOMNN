@@ -28,7 +28,7 @@ BasisA::Name BasisA::Name::read(const char* str){
 	else if(std::strcmp(str,"STUDENT3")==0) return BasisA::Name::STUDENT3;
 	else if(std::strcmp(str,"STUDENT4")==0) return BasisA::Name::STUDENT4;
 	else if(std::strcmp(str,"STUDENT5")==0) return BasisA::Name::STUDENT5;
-	else return BasisA::Name::UNKNOWN;
+	else return BasisA::Name::NONE;
 }
 
 const char* BasisA::Name::name(const BasisA::Name& name){
@@ -39,7 +39,7 @@ const char* BasisA::Name::name(const BasisA::Name& name){
 		case BasisA::Name::STUDENT3: return "STUDENT3";
 		case BasisA::Name::STUDENT4: return "STUDENT4";
 		case BasisA::Name::STUDENT5: return "STUDENT5";
-		default: return "UNKNOWN";
+		default: return "NONE";
 	}
 }
 
@@ -51,7 +51,7 @@ std::ostream& operator<<(std::ostream& out, const BasisA::Name& name){
 		case BasisA::Name::STUDENT3: out<<"STUDENT3"; break;
 		case BasisA::Name::STUDENT4: out<<"STUDENT4"; break;
 		case BasisA::Name::STUDENT5: out<<"STUDENT5"; break;
-		default: out<<"UNKNOWN"; break;
+		default: out<<"NONE"; break;
 	}
 	return out;
 }
@@ -62,7 +62,7 @@ std::ostream& operator<<(std::ostream& out, const BasisA::Name& name){
 * constructor
 */
 BasisA::BasisA(double rc, Cutoff::Name cutname, int size, BasisA::Name name):Basis(rc,cutname,size){
-	if(name==BasisA::Name::UNKNOWN) throw std::invalid_argument("BasisA(rc,Cutoff::Name,int,BasisA::Name): invalid angular function type");
+	if(name==BasisA::Name::NONE) throw std::invalid_argument("BasisA(rc,Cutoff::Name,int,BasisA::Name): invalid angular function type");
 	else name_=name;
 	resize(size);
 }
@@ -144,7 +144,7 @@ void BasisA::read(FILE* reader, BasisA& basis){
 void BasisA::clear(){
 	if(BASIS_ANGULAR_PRINT_FUNC>0) std::cout<<"BasisA::clear():\n";
 	Basis::clear();
-	name_=BasisA::Name::UNKNOWN;
+	name_=BasisA::Name::NONE;
 	eta_.clear();
 	zeta_.clear();
 	ieta2_.clear();
@@ -463,7 +463,7 @@ namespace serialize{
 	template <> int unpack(BasisA& obj, const char* arr){
 		if(BASIS_ANGULAR_PRINT_FUNC>0) std::cout<<"unpack(BasisA&,const char*):\n";
 		int pos=0; int size=0;
-		BasisA::Name name=BasisA::Name::UNKNOWN;
+		BasisA::Name name=BasisA::Name::NONE;
 		std::memcpy(&size,arr+pos,sizeof(size)); pos+=sizeof(size);
 		std::memcpy(&name,arr+pos,sizeof(BasisA::Name)); pos+=sizeof(BasisA::Name);
 		pos+=unpack(obj.cutoff(),arr+pos);
