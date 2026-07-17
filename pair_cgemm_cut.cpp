@@ -67,14 +67,12 @@ PairCGemmCut::~PairCGemmCut()
 
 void PairCGemmCut::compute(int eflag, int vflag)
 {
-  double r2inv, r6inv, forcelj;
+  // local constants
+  const double cRep=1.0/rRep;
+  const double qqrd2e=force->qqrd2e;
   
-  const double rRep=0.05;
-  const double cRep=1.0/(2.0*rRep*rRep);
-
   double evdwl = 0.0;
   double ecoul = 0.0;
-  const double qqrd2e=force->qqrd2e;
   ev_init(eflag, vflag);
 
   double *q = atom->q;
@@ -203,8 +201,9 @@ void PairCGemmCut::allocate()
 
 void PairCGemmCut::settings(int narg, char **arg)
 {
-  if (narg != 1) error->all(FLERR, "Illegal pair_style command");
+  if (narg != 2) error->all(FLERR, "Illegal pair_style command");
   cut_global = utils::numeric(FLERR, arg[0], false, lmp);
+  rRep = utils::numeric(FLERR, arg[1], false, lmp);
   // reset cutoffs that have been explicitly set
   if (allocated) {
     for (int i = 1; i <= atom->ntypes; i++){
@@ -405,8 +404,7 @@ double PairCGemmCut::single(int i, int j, int itype, int jtype, double rsq,
 {
   double *q = atom->q;
   const double r=std::sqrt(rsq);
-  const double rRep=0.05;
-  const double cRep=1.0/(2.0*rRep*rRep);
+  const double cRep=1.0/rRep;
 
   // coulomb
   const double qqrd2e=force->qqrd2e;
@@ -427,6 +425,7 @@ double PairCGemmCut::single(int i, int j, int itype, int jtype, double rsq,
   
   // repulsive
   const double eRep=aRep[itype][jtype]*std::exp(-cRep*r)*factor_lj;
+  //const double eRep=aRep[itype][jtype]*cRep*std::exp(-cRep*r)*factor_lj;
   const double fRep=cRep*eRep;
 
   //force
@@ -447,10 +446,6 @@ void *PairCGemmCut::extract(const char *str, int &dim)
   if (strcmp(str, "gammaS") == 0) {
     dim = 2;
     return (void *) gammaS;
-  }
-  if (strcmp(str, "aOver") == 0) {
-    dim = 2;
-    return (void *) aOver;
   }
   if (strcmp(str, "aOver") == 0) {
     dim = 2;
