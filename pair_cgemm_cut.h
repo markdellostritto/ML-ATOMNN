@@ -45,6 +45,7 @@ class PairCGemmCut : public Pair {
  protected:
   double cut_global;
   double **cut;
+  double rRep;
 
   double** aOver;//overlap amplitude
   double** aRep;//repulsion amplitude
