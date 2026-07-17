@@ -42,6 +42,7 @@ PairCGemmLong::PairCGemmLong(LAMMPS *lmp) : Pair(lmp)
   ewaldflag = pppmflag = 1;
   born_matrix_enable = 0;
   writedata = 1;
+  rRep = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -67,32 +68,34 @@ PairCGemmLong::~PairCGemmLong()
 
 void PairCGemmLong::compute(int eflag, int vflag)
 {
-  double r2inv, r6inv, forcelj;
-  
-  const double rRep=0.05;
-  const double cRep=1.0/(2.0*rRep*rRep);
+  // local constants
+  const double cRep=1.0/rRep;
+  const double qqrd2e=force->qqrd2e;
 
+  // total energies
   double evdwl = 0.0;
   double ecoul = 0.0;
-  const double qqrd2e=force->qqrd2e;
   ev_init(eflag, vflag);
 
+  // atom properties
   double *q = atom->q;
   double **x = atom->x;
   double **f = atom->f;
   int *type = atom->type;
   const int nlocal = atom->nlocal;
+
+  // calculation flags/factors
   double *special_lj = force->special_lj;
   double *special_coul = force->special_coul;
   const int newton_pair = force->newton_pair;
 
+  // neighbors
   const int inum = list->inum;
   const int* ilist = list->ilist;
   const int* numneigh = list->numneigh;
   int** firstneigh = list->firstneigh;
 
   // loop over neighbors of my atoms
-
   for (int ii = 0; ii < inum; ii++) {
     const int i = ilist[ii];
     const double xi = x[i][0];
@@ -121,7 +124,7 @@ void PairCGemmLong::compute(int eflag, int vflag)
       if (dr2 < cutsq[itype][jtype]) {
         const double dr=std::sqrt(dr2);
         
-        //coulomb
+        // compute energy/force - coulomb
         const double prefactor=qqrd2e*qi*qj/dr;
         const double ferfg=std::erf(rgammaC[itype][jtype]*dr);
         const double ferfp=std::erf(g_ewald*dr);
@@ -137,14 +140,16 @@ void PairCGemmLong::compute(int eflag, int vflag)
           if (factor_coul < 1.0) fCoul -= (1.0 - factor_coul) * prefactor;
         } 
         
-        //overlap
+        // compute energy/force - overlap
         const double eOver=aOver[itype][jtype]*Zi*Zj*std::exp(-0.5*gammaS[itype][jtype]*dr2)*factor_lj;
         double fOver=gammaS[itype][jtype]*eOver;
         
-        //repulsion
+        // compute energy/force - repulsion
         const double eRep=aRep[itype][jtype]*std::exp(-cRep*dr)*factor_lj;
+        //const double eRep=aRep[itype][jtype]*cRep*std::exp(-cRep*dr)*factor_lj;
         const double fRep=cRep*eRep;
 
+        // compute total force
         const double fpair = fCoul+fOver+fRep;
         f[i][0] += delx * fpair;
         f[i][1] += dely * fpair;
@@ -155,6 +160,7 @@ void PairCGemmLong::compute(int eflag, int vflag)
           f[j][2] -= delz * fpair;
         }
 
+        // compute total energy
         if (eflag) {
           evdwl = eOver + eRep;
           if(dr>1e-8){
@@ -165,6 +171,7 @@ void PairCGemmLong::compute(int eflag, int vflag)
           }
         }
 
+        // tally energy and force
         if (evflag) ev_tally(i, j, nlocal, newton_pair, evdwl, ecoul, fpair, delx, dely, delz);
       }
     }
@@ -206,8 +213,9 @@ void PairCGemmLong::allocate()
 
 void PairCGemmLong::settings(int narg, char **arg)
 {
-  if (narg != 1) error->all(FLERR, "Illegal pair_style command");
+  if (narg != 2) error->all(FLERR, "Illegal pair_style command");
   cut_global = utils::numeric(FLERR, arg[0], false, lmp);
+  rRep = utils::numeric(FLERR, arg[1], false, lmp);
   // reset cutoffs that have been explicitly set
   if (allocated) {
     for (int i = 1; i <= atom->ntypes; i++){
@@ -263,12 +271,12 @@ void PairCGemmLong::coeff(int narg, char **arg)
 void PairCGemmLong::init_style()
 {
   //check for charge
-  if (!atom->q_flag) error->all(FLERR, "Pair style lj/cut/coul/long requires atom attribute q");
+  if (!atom->q_flag) error->all(FLERR, "Pair style cgemm/long requires atom attribute q");
   //set neighborlist style
   int list_style = NeighConst::REQ_DEFAULT;
   neighbor->add_request(this, list_style);
   // ensure use of KSpace long-range solver, set g_ewald
-  if (force->kspace == nullptr) error->all(FLERR, "Pair style requires a KSpace style");
+  if (force->kspace == nullptr) error->all(FLERR, "Pair style cgemm/long requires a KSpace style");
   g_ewald = force->kspace->g_ewald;
 }
 
@@ -369,6 +377,7 @@ void PairCGemmLong::read_restart(FILE *fp)
 void PairCGemmLong::write_restart_settings(FILE *fp)
 {
   fwrite(&cut_global, sizeof(double), 1, fp);
+  fwrite(&rRep, sizeof(double), 1, fp);
 }
 
 /* ----------------------------------------------------------------------
@@ -380,8 +389,10 @@ void PairCGemmLong::read_restart_settings(FILE *fp)
   int me = comm->me;
   if (me == 0) {
     utils::sfread(FLERR, &cut_global, sizeof(double), 1, fp, nullptr, error);
+    utils::sfread(FLERR, &rRep, sizeof(double), 1, fp, nullptr, error);
   }
   MPI_Bcast(&cut_global, 1, MPI_DOUBLE, 0, world);
+  MPI_Bcast(&rRep, 1, MPI_DOUBLE, 0, world);
 }
 
 /* ----------------------------------------------------------------------
@@ -413,10 +424,9 @@ double PairCGemmLong::single(int i, int j, int itype, int jtype, double rsq,
 {
   double *q = atom->q;
   const double r=std::sqrt(rsq);
-  const double rRep=0.05;
-  const double cRep=1.0/(2.0*rRep*rRep);
+  const double cRep=1.0/rRep;
 
-  // coulomb
+  // compute energy/force - coulomb
   const double qqrd2e=force->qqrd2e;
   const double prefactor=qqrd2e*q[i]*q[j]/r;
   const double ferfg=std::erf(rgammaC[itype][jtype]*r);
@@ -440,18 +450,19 @@ double PairCGemmLong::single(int i, int j, int itype, int jtype, double rsq,
     eCoul = 2.0/MY_PIS*qqrd2e*q[i]*q[j]*(rgammaC[itype][jtype]-g_ewald);
   }
   
-  // overlap
+  // compute energy/force - overlap
   const double eOver=aOver[itype][jtype]*std::fabs(q[i])*std::fabs(q[j])*std::exp(-0.5*gammaS[itype][jtype]*rsq)*factor_lj;
   const double fOver=gammaS[itype][jtype]*eOver;
   
-  // repulsive
+  // compute energy/force - repulsive
   const double eRep=aRep[itype][jtype]*std::exp(-cRep*r)*factor_lj;
+  //const double eRep=aRep[itype][jtype]*cRep*std::exp(-cRep*r)*factor_lj;
   const double fRep=cRep*eRep;
 
-  // compute force
+  // compute total force
   fforce = fCoul+fOver+fRep;
 
-  // compute energy
+  // compute total energy
   return eCoul+eOver+eRep;
 }
 
@@ -462,6 +473,10 @@ void *PairCGemmLong::extract(const char *str, int &dim)
   if (strcmp(str, "cut_coul") == 0) {
     dim = 0;
     return (void *) &cut_global;
+  }
+  if (strcmp(str, "rRep") == 0) {
+    dim = 0;
+    return (void *) &rRep;
   }
   if (strcmp(str, "gammaC") == 0) {
     dim = 2;

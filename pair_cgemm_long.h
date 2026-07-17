@@ -46,6 +46,7 @@ class PairCGemmLong : public Pair {
   double cut_global;
   double **cut;
   double g_ewald;
+  double rRep;
 
   double** aOver;//repulsion amplitude
   double** aRep;//repulsion amplitude
